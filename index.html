@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline C++ Compiler</title>
+    <style>
+        :root {
+            --primary-color: #007acc;
+            --secondary-color: #0056b3;
+            --bg-color: #f5f5f5;
+            --editor-bg: #1e1e1e;
+            --text-color: #333;
+            --border-color: #ddd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            margin: 0;
+            padding: 0 20px;
+            font-size: 24px;
+        }
+
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .editor-header {
+            display: flex;
+            background-color: #eee;
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+            background-color: #ddd;
+        }
+
+        .tab.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .editor-wrapper {
+            display: flex;
+            flex: 1;
+        }
+
+        .code-editor {
+            flex: 2;
+            height: 100%;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            border: none;
+            resize: none;
+            padding: 10px;
+            background-color: var(--editor-bg);
+            color: white;
+        }
+
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .output {
+            flex: 1;
+            padding: 10px;
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+            font-family: 'Consolas', 'Courier New', monospace;
+            overflow-y: auto;
+        }
+
+        .controls {
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        button {
+            padding: 8px 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .status-bar {
+            padding: 5px 10px;
+            background-color: #333;
+            color: white;
+            font-size: 12px;
+        }
+
+        .file-actions {
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .editor-wrapper {
+                flex-direction: column;
+            }
+            
+            .right-panel {
+                border-left: none;
+                border-top: 1px solid var(--border-color);
+            }
+        }
+
+        /* WASM loading indicator */
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .console {
+            flex: 1;
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+            font-family: 'Consolas', 'Courier New', monospace;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .console-input {
+            display: flex;
+            background-color: #2d2d2d;
+            padding: 5px;
+            border-top: 1px solid #444;
+        }
+
+        .console-input span {
+            color: #0f0;
+            margin-right: 5px;
+        }
+
+        .console-input input {
+            flex: 1;
+            background-color: transparent;
+            border: none;
+            color: white;
+            font-family: 'Consolas', 'Courier New', monospace;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Offline C++ Compiler | georg michelle</h1>
+    </header>
+
+    <div class="container">
+        <div class="file-actions">
+            <button id="new-file">New File</button>
+            <button id="save-file">Save File</button>
+            <button id="open-file">Open File</button>
+            <button id="download-wasm">Download WASM Components</button>
+            <span id="compiler-status">Compiler Status: Not Loaded</span>
+        </div>
+
+        <div class="editor-container">
+            <div class="editor-header">
+                <div class="tab active" data-target="cpp">main.cpp</div>
+            </div>
+
+            <div class="editor-wrapper">
+                <textarea id="code-editor" class="code-editor" spellcheck="false">#include <iostream>
+
+int main() {
+    std::cout << "Hello, World!" << std::endl;
+    return 0;
+}</textarea>
+
+                <div class="right-panel">
+                    <div class="output" id="output"></div>
+                    <div class="console hidden" id="console-container">
+                        <div id="console-output"></div>
+                        <div class="console-input">
+                            <span>></span>
+                            <input type="text" id="console-input" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div>
+                    <button id="compile-btn">Compile</button>
+                    <button id="run-btn">Run</button>
+                    <button id="stop-btn" disabled>Stop</button>
+                </div>
+                <div>
+                    <button id="toggle-console">Toggle Console</button>
+                    <button id="clear-output">Clear Output</button>
+                </div>
+            </div>
+
+            <div class="status-bar">
+                <span id="status">Ready</span>
+            </div>
+        </div>
+        
+        <div id="wasm-loader" class="loader"></div>
+    </div>
+
+    <script>
+        // Storage for compiler components
+        let wasmModule = null;
+        let compilerReady = false;
+        let isRunning = false;
+        let programExited = true;
+        let stdoutBuffer = "";
+        let stdinCallback = null;
+        
+        // DOM Elements
+        const codeEditor = document.getElementById('code-editor');
+        const outputElement = document.getElementById('output');
+        const statusElement = document.getElementById('status');
+        const compileBtn = document.getElementById('compile-btn');
+        const runBtn = document.getElementById('run-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const clearOutputBtn = document.getElementById('clear-output');
+        const toggleConsoleBtn = document.getElementById('toggle-console');
+        const consoleContainer = document.getElementById('console-container');
+        const consoleOutput = document.getElementById('console-output');
+        const consoleInput = document.getElementById('console-input');
+        const compilerStatus = document.getElementById('compiler-status');
+        const wasmLoader = document.getElementById('wasm-loader');
+        const newFileBtn = document.getElementById('new-file');
+        const saveFileBtn = document.getElementById('save-file');
+        const openFileBtn = document.getElementById('open-file');
+        const downloadWasmBtn = document.getElementById('download-wasm');
+
+        // Mock compiler API (in a real implementation, this would use WebAssembly)
+        function initializeCompiler() {
+            wasmLoader.style.display = 'block';
+            statusElement.textContent = 'Loading compiler...';
+            
+            // Simulate loading time
+            setTimeout(() => {
+                compilerReady = true;
+                wasmLoader.style.display = 'none';
+                statusElement.textContent = 'Compiler ready';
+                compilerStatus.textContent = 'Compiler Status: Ready';
+                
+                // Enable buttons
+                compileBtn.disabled = false;
+                runBtn.disabled = false;
+            }, 2000);
+        }
+
+        function compileCode(sourceCode) {
+            if (!compilerReady) {
+                appendToOutput("Error: Compiler not loaded yet.");
+                return false;
+            }
+            
+            appendToOutput("Compiling...");
+            
+            // Simulate compilation time
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Very basic C++ syntax check
+                    if (!sourceCode.includes('main()')) {
+                        appendToOutput("Error: No main() function found.");
+                        resolve(false);
+                    } else if (!sourceCode.includes('return')) {
+                        appendToOutput("Warning: No return statement in main function.");
+                        resolve(true);
+                    } else {
+                        appendToOutput("Compilation successful.");
+                        resolve(true);
+                    }
+                }, 1000);
+            });
+        }
+
+        async function runProgram() {
+            if (!compilerReady || isRunning) {
+                return;
+            }
+            
+            const successful = await compileCode(codeEditor.value);
+            if (!successful) {
+                return;
+            }
+            
+            isRunning = true;
+            programExited = false;
+            stopBtn.disabled = false;
+            runBtn.disabled = true;
+            compileBtn.disabled = true;
+            
+            appendToOutput("\n--- Program Output ---");
+            
+            // Parse and execute the C++ code (very simplified)
+            setTimeout(() => {
+                // Extract and display cout statements
+                const codeLines = codeEditor.value.split('\n');
+                const coutRegex = /cout\s*<<\s*["'](.+?)["']/g;
+                
+                codeLines.forEach(line => {
+                    let match;
+                    while ((match = coutRegex.exec(line)) !== null) {
+                        appendToOutput(match[1]);
+                    }
+                });
+                
+                if (codeEditor.value.includes('cin >>')) {
+                    showConsoleInput();
+                } else {
+                    finishExecution();
+                }
+            }, 500);
+        }
+
+        function stopProgram() {
+            if (!isRunning) return;
+            
+            appendToOutput("\n--- Program terminated by user ---");
+            finishExecution();
+        }
+
+        function finishExecution() {
+            isRunning = false;
+            programExited = true;
+            stopBtn.disabled = true;
+            runBtn.disabled = false;
+            compileBtn.disabled = false;
+            appendToOutput("\n--- Program exited ---");
+        }
+
+        function appendToOutput(text) {
+            outputElement.textContent += text + "\n";
+            outputElement.scrollTop = outputElement.scrollHeight;
+        }
+
+        function showConsoleInput() {
+            consoleContainer.classList.remove('hidden');
+            outputElement.classList.add('hidden');
+            consoleInput.focus();
+            
+            // Handle console input
+            consoleInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const input = consoleInput.value;
+                    consoleOutput.textContent += "> " + input + "\n";
+                    consoleInput.value = '';
+                    
+                    // Process input
+                    if (stdinCallback) {
+                        stdinCallback(input);
+                        stdinCallback = null;
+                    }
+                    
+                    finishExecution();
+                }
+            });
+        }
+
+        // UI Event Handlers
+        compileBtn.addEventListener('click', async () => {
+            clearOutput();
+            await compileCode(codeEditor.value);
+        });
+
+        runBtn.addEventListener('click', runProgram);
+        stopBtn.addEventListener('click', stopProgram);
+
+        clearOutputBtn.addEventListener('click', clearOutput);
+        
+        toggleConsoleBtn.addEventListener('click', () => {
+            consoleContainer.classList.toggle('hidden');
+            outputElement.classList.toggle('hidden');
+        });
+
+        function clearOutput() {
+            outputElement.textContent = '';
+            consoleOutput.textContent = '';
+        }
+
+        // File operations
+        newFileBtn.addEventListener('click', () => {
+            if (confirm('Create a new file? Unsaved changes will be lost.')) {
+                codeEditor.value = '#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!" << std::endl;\n    return 0;\n}';
+                clearOutput();
+            }
+        });
+
+        saveFileBtn.addEventListener('click', () => {
+            const blob = new Blob([codeEditor.value], {type: 'text/plain'});
+            const a = document.createElement('a');
+            a.download = 'main.cpp';
+            a.href = URL.createObjectURL(blob);
+            a.click();
+        });
+
+        openFileBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.cpp,.h,.cc,.hpp';
+            
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    codeEditor.value = event.target.result;
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        });
+
+        downloadWasmBtn.addEventListener('click', () => {
+            if (compilerReady) {
+                alert('Compiler components are already loaded.');
+                return;
+            }
+            
+            initializeCompiler();
+        });
+
+        // Add basic syntax highlighting (a very simple version)
+        function updateSyntaxHighlighting() {
+            // In a real implementation, you would use a library like CodeMirror or Monaco Editor
+            // This is just a placeholder for the concept
+        }
+
+        codeEditor.addEventListener('input', updateSyntaxHighlighting);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // In a real implementation, you would check for cached WASM modules
+            // and initialize automatically if available
+            statusElement.textContent = 'Click "Download WASM Components" to load the compiler';
+        });
+    </script>
+</body>
+</html>
