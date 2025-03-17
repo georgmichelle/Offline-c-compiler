@@ -267,7 +267,7 @@ int main() {
     </div>
 
     <script>
-        // Storage for compiler components
+        
         let wasmModule = null;
         let compilerReady = false;
         let isRunning = false;
@@ -275,7 +275,7 @@ int main() {
         let stdoutBuffer = "";
         let stdinCallback = null;
         
-        // DOM Elements
+        
         const codeEditor = document.getElementById('code-editor');
         const outputElement = document.getElementById('output');
         const statusElement = document.getElementById('status');
@@ -294,19 +294,18 @@ int main() {
         const openFileBtn = document.getElementById('open-file');
         const downloadWasmBtn = document.getElementById('download-wasm');
 
-        // Mock compiler API (in a real implementation, this would use WebAssembly)
-        function initializeCompiler() {
+         function initializeCompiler() {
             wasmLoader.style.display = 'block';
             statusElement.textContent = 'Loading compiler...';
             
-            // Simulate loading time
+            
             setTimeout(() => {
                 compilerReady = true;
                 wasmLoader.style.display = 'none';
                 statusElement.textContent = 'Compiler ready';
                 compilerStatus.textContent = 'Compiler Status: Ready';
                 
-                // Enable buttons
+                
                 compileBtn.disabled = false;
                 runBtn.disabled = false;
             }, 2000);
@@ -320,10 +319,10 @@ int main() {
             
             appendToOutput("Compiling...");
             
-            // Simulate compilation time
+            
             return new Promise((resolve) => {
                 setTimeout(() => {
-                    // Very basic C++ syntax check
+                    
                     if (!sourceCode.includes('main()')) {
                         appendToOutput("Error: No main() function found.");
                         resolve(false);
@@ -356,9 +355,9 @@ int main() {
             
             appendToOutput("\n--- Program Output ---");
             
-            // Parse and execute the C++ code (very simplified)
+            
             setTimeout(() => {
-                // Extract and display cout statements
+                
                 const codeLines = codeEditor.value.split('\n');
                 const coutRegex = /cout\s*<<\s*["'](.+?)["']/g;
                 
@@ -403,14 +402,14 @@ int main() {
             outputElement.classList.add('hidden');
             consoleInput.focus();
             
-            // Handle console input
+            
             consoleInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     const input = consoleInput.value;
                     consoleOutput.textContent += "> " + input + "\n";
                     consoleInput.value = '';
                     
-                    // Process input
+                    
                     if (stdinCallback) {
                         stdinCallback(input);
                         stdinCallback = null;
@@ -421,7 +420,7 @@ int main() {
             });
         }
 
-        // UI Event Handlers
+        
         compileBtn.addEventListener('click', async () => {
             clearOutput();
             await compileCode(codeEditor.value);
@@ -442,7 +441,7 @@ int main() {
             consoleOutput.textContent = '';
         }
 
-        // File operations
+        
         newFileBtn.addEventListener('click', () => {
             if (confirm('Create a new file? Unsaved changes will be lost.')) {
                 codeEditor.value = '#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!" << std::endl;\n    return 0;\n}';
@@ -486,9 +485,8 @@ int main() {
             initializeCompiler();
         });
 
-        // Add basic syntax highlighting (a very simple version)
+        
         function updateSyntaxHighlighting() {
-            // In a real implementation, you would use a library like CodeMirror or Monaco Editor
             // This is just a placeholder for the concept
         }
 
